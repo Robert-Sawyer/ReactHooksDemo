@@ -11,10 +11,24 @@ const Ingredients =() => {
     //Ingredient to wprowadzone przez inputy składniki w ingredientForm, a fukcja set tworzy tablice z pierwotnego
     //stanu składników i obiektu zawierającego unikalny id i listę skopiowanych składników wprowadzonych w formularzu
     const addIngredientHandler = ingredient => {
-        setUserIngredients(prevIngredients => [
-            ...prevIngredients,
-            {id: Math.random().toString(), ...ingredient}
-        ]);
+        //fetch to NIE jest funkcja reactowa, tylko funkcja przeglądarki, można ją dostosować do swoich potrzeb, przekazująć
+        //konfigurację jako drugi argument funkcji - pierwszym jest url
+        fetch("https://react-hooks-df071.firebaseio.com/ingredients.json", {
+            method: 'POST',
+            body: JSON.stringify(ingredient),
+            headers: {'Content-Type': 'application/json'}
+        }).then(response => {
+            //to,co jest zawarte w then nie wykona się natychmiast ale wtedy, gdy zostanie pomyślnie zrealizowane polecenie powyżej
+            //response.json przekonwertuje zawartość odpowiedzi z jsona na kod JS
+            return response.json();
+        }).then(responseData => {
+            //drugi then powinniśmy wykonać wtedy gdy odpowiedź z pierwszego bloku then zostanie rozparsowana z jsona
+            setUserIngredients(prevIngredients => [
+                ...prevIngredients,
+                //firebase (tylko!) w odpowiedzi na zapytanie wysyła obiekt z zawartym name, które jest unikanym id dlatego dopasowuję name do id
+                {id: responseData.name, ...ingredient}
+            ]);
+        })
     };
 
     const removeIngredientHandler = ingredientId => {
