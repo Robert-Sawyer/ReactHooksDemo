@@ -8,27 +8,10 @@ const Ingredients =() => {
 
     const [userIngredients, setUserIngredients] =  useState([]);
 
-    //useEffect wykona się zawsze, gdy ten komponent zostanie zrenderowany i NA KOŃCU CYKLU - PO WSZYSTKICH FUNKCJACH
     useEffect(() => {
-        fetch("https://react-hooks-df071.firebaseio.com/ingredients.json")
-            .then(response => response.json())
-            .then(responseData => {
-                const loadedIngredients = [];
-                for (const key in responseData) {
-                    loadedIngredients.push({
-                        id: key,
-                        title: responseData[key].title,
-                        amount: responseData[key].amount
-                    })
-                }
-                setUserIngredients(loadedIngredients);
-            })
-        //useEffect ma drugi argument - tablicę z ZALEŻNOŚCIAMI FUNKCJI (TEJ WEWNĄTRZ USEEFFECT) I TYLKO WTEDY, GDY ZALEŻNOŚCI
-        // ULEGNA ZMIANIE, FUNKCJA ODPALI SIĘ PONOWNIE. DZIEKI TEMU MOŻNA DECYDOWAĆ JAK CZĘSTO FUNKCJA BĘDZIE SIĘ URUCHAMIAĆ.
-        //DOMYŚLNIE JEST TO PO KAŻDYM CYKLU ŁADOWANIA KOMPONENTU (RENDER)
-        //UMIESZCZENIE PUSTEJ TABLICY SPOWODUJE, ŻE USEEFFECT URUCHOMI SIĘ TYLKO RAZ - PO PIERWSZYM ZAŁADOWANIU STRONY (ZACHOWUJE SIĘ W TAKIEJ
-        //KONFIGURACJI IDENTYCZNIE, CO COMPONENTDIDMOUNT - URUCHAMIA SIE TYLKO RAZ
-    }, []);
+        console.log('RENDERING INGREDIENTS', userIngredients);
+    }, [userIngredients]);
+
 
     //ta funkcja filtruje wyszukiwane składniki
     //używam tu useCallback ponieważ gdy go nie było, komponent się renderował (ponieważ ładowała się lista wprowadzonych wczesniej składnikow)
@@ -63,7 +46,11 @@ const Ingredients =() => {
     };
 
     const removeIngredientHandler = ingredientId => {
-        setUserIngredients(prevIngr => prevIngr.filter(ingredients => ingredients.id !== ingredientId));
+        fetch(`https://react-hooks-df071.firebaseio.com/ingredients/${ingredientId}.json`, {
+            method: 'DELETE'
+        }).then(response => {
+            setUserIngredients(prevIngr => prevIngr.filter(ingredients => ingredients.id !== ingredientId));
+        })
     };
 
   return (
