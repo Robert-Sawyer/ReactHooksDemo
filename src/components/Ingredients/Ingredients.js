@@ -3,10 +3,14 @@ import React, {useState, useEffect, useCallback} from 'react';
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import Search from './Search';
+import ErrorModal from '../UI/ErrorModal';
 
-const Ingredients =() => {
+const Ingredients = () => {
 
-    const [userIngredients, setUserIngredients] =  useState([]);
+    const [userIngredients, setUserIngredients] = useState([]);
+    //to jest odpowiednik z burger burgera state = loading: false. Będę go uzywał do używania Spinnera przy ładowaniu
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState();
 
     useEffect(() => {
         console.log('RENDERING INGREDIENTS', userIngredients);
@@ -25,6 +29,7 @@ const Ingredients =() => {
     //Ingredient to wprowadzone przez inputy składniki w ingredientForm, a fukcja set tworzy tablice z pierwotnego
     //stanu składników i obiektu zawierającego unikalny id i listę skopiowanych składników wprowadzonych w formularzu
     const addIngredientHandler = ingredient => {
+        setIsLoading(true);
         //fetch to NIE jest funkcja reactowa, tylko funkcja przeglądarki, można ją dostosować do swoich potrzeb, przekazująć
         //konfigurację jako drugi argument funkcji - pierwszym jest url
         fetch("https://react-hooks-df071.firebaseio.com/ingredients.json", {
@@ -32,6 +37,7 @@ const Ingredients =() => {
             body: JSON.stringify(ingredient),
             headers: {'Content-Type': 'application/json'}
         }).then(response => {
+            setIsLoading(false);
             //to,co jest zawarte w then nie wykona się natychmiast ale wtedy, gdy zostanie pomyślnie zrealizowane polecenie powyżej
             //response.json przekonwertuje zawartość odpowiedzi z jsona na kod JS
             return response.json();
@@ -43,28 +49,42 @@ const Ingredients =() => {
                 {id: responseData.name, ...ingredient}
             ]);
         })
+            .catch(error => {
+                setError('Oops, something went wrong!')
+            });
     };
 
     const removeIngredientHandler = ingredientId => {
+        setIsLoading(true);
         fetch(`https://react-hooks-df071.firebaseio.com/ingredients/${ingredientId}.json`, {
             method: 'DELETE'
         }).then(response => {
+            setIsLoading(false);
             setUserIngredients(prevIngr => prevIngr.filter(ingredients => ingredients.id !== ingredientId));
         })
+            .catch(error => {
+                setError('Oops, something went wrong!');
+                setIsLoading(false);
+            })
     };
 
-  return (
-    <div className="App">
-        {/*Tutaj idzie funkcja powyżej i zostaje wywołana w momencie wysłania formularza w IngredientForm*/}
-      <IngredientForm onAddIngredient={addIngredientHandler}/>
+    const clearError = () => {
+        setError(null);
+    };
 
-      <section>
-        <Search onLoadIngredients={filteredIngredientsHandler}/>
-        {/*tu idą pierwotne ingrediencje*/}
-        <IngredientList ingredients={userIngredients} onRemoveItem={removeIngredientHandler}/>
-      </section>
-    </div>
-  );
+    return (
+        <div className="App">
+            {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+            {/*Tutaj idzie funkcja powyżej i zostaje wywołana w momencie wysłania formularza w IngredientForm*/}
+            <IngredientForm onAddIngredient={addIngredientHandler} loading={isLoading}/>
+
+            <section>
+                <Search onLoadIngredients={filteredIngredientsHandler}/>
+                {/*tu idą pierwotne ingrediencje*/}
+                <IngredientList ingredients={userIngredients} onRemoveItem={removeIngredientHandler}/>
+            </section>
+        </div>
+    );
 }
 
 export default Ingredients;
