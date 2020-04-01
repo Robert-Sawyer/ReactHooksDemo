@@ -1,13 +1,48 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useReducer, useState, useEffect, useCallback} from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
 import Search from './Search';
 import ErrorModal from '../UI/ErrorModal';
 
+//do tej funkcji wrzucamy aktualny stan skłądników i action, co przyda się przy aktualizacji stanu
+const ingredientReducer = (currentIngredients, action) => {
+    switch (action.type) {
+        //chcę ustawić składniki więc odnoszę sie do składników w action i zastepuję stary stan nowym (aktualizuję)
+        case 'SET':
+            return action.ingredients;
+        //w tym przypadku chce dodać nowy skłądnik i nie chcę zastępować starego, tylko skopiować stary i wstwić nowy z dodanym nowym składnikiem
+        case 'ADD':
+            return [...currentIngredients, action.ingredient];
+        //tutaj porównuję, czy id usuwanego składnika jest takie samo jak id przesłąne w akcji. zwraca tylko elementy z innym id.
+        case "DELETE":
+            return currentIngredients.filter(ing => ing.id !== action.id);
+        default:
+            throw new Error("Wystąpił błąd");
+    }
+};
+
+//MOŻNA TEGO UŻYĆ ANALOGICZNIE JAK TEGO POWYŻEJ DO USTAWIANIA STANU LOADING I ERROR, ALE JA WOLĘ SKORZYSTAĆ Z USESTATE, BO JEST BARDZIEJ
+//CZYTELNIE. ŻEBY TEN SPOSÓB MÓGŁ ZADZIAŁAĆ, TRZEBA ZAMIENIĆ WSZYSTKIE WYSTAPIENIA SETLOADING I SETERROR NA NP. DISPATCHHTTP({LOADING:TRUE})
+//ALBO HTTPSTATE.ERROR - SZCZEGÓŁY W FILMIE 444 Z KURSU REACTA
+// const httpReducer = (httpState, action) => {
+//     switch (action.type) {
+//         case 'SEND':
+//             return {loading: true, error: null};
+//         case 'RESPONSE':
+//             return {...httpState, loading: false};
+//         case 'ERROR':
+//             return {loading: false, error: action.errorData};
+//         default:
+//             throw new Error("Wystąpił błąd");
+//     }
+// };
+
 const Ingredients = () => {
 
-    const [userIngredients, setUserIngredients] = useState([]);
+    const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
+    // const [userIngredients, setUserIngredients] = useState([]);
+    // const [httpState, dispatchHttp] = useReducer(httpReducer, {loading: false, error: null});
     //to jest odpowiednik z burger burgera state = loading: false. Będę go uzywał do używania Spinnera przy ładowaniu
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState();
@@ -23,7 +58,8 @@ const Ingredients = () => {
     //i wtedy odświeżała się wartość funkcji przekazanej jako drugi parametr w zależnościach w useEffect. useCallback też posiada tablicę
     //z zaleznościami, ale w tym przypadku wykona się tylko raz.
     const filteredIngredientsHandler = useCallback(filteredIngredients => {
-        setUserIngredients(filteredIngredients);
+        // setUserIngredients(filteredIngredients);
+        dispatch({type: 'SET', ingredients: filteredIngredients});
     }, []);
 
     //Ingredient to wprowadzone przez inputy składniki w ingredientForm, a fukcja set tworzy tablice z pierwotnego
@@ -43,11 +79,11 @@ const Ingredients = () => {
             return response.json();
         }).then(responseData => {
             //drugi then powinniśmy wykonać wtedy gdy odpowiedź z pierwszego bloku then zostanie rozparsowana z jsona
-            setUserIngredients(prevIngredients => [
-                ...prevIngredients,
-                //firebase (tylko!) w odpowiedzi na zapytanie wysyła obiekt z zawartym name, które jest unikanym id dlatego dopasowuję name do id
-                {id: responseData.name, ...ingredient}
-            ]);
+            // setUserIngredients(prevIngredients => [
+            //     ...prevIngredients,
+            //     //firebase (tylko!) w odpowiedzi na zapytanie wysyła obiekt z zawartym name, które jest unikanym id dlatego dopasowuję name do id
+            //     {id: responseData.name, ...ingredient}]
+            dispatch({type: 'ADD', ingredient: {id: responseData.name, ...ingredient}})
         })
             .catch(error => {
                 setError('Oops, something went wrong!')
@@ -60,7 +96,8 @@ const Ingredients = () => {
             method: 'DELETE'
         }).then(response => {
             setIsLoading(false);
-            setUserIngredients(prevIngr => prevIngr.filter(ingredients => ingredients.id !== ingredientId));
+            // setUserIngredients(prevIngr => prevIngr.filter(ingredients => ingredients.id !== ingredientId));
+            dispatch({type: 'DELETE', id: ingredientId})
         })
             .catch(error => {
                 setError('Oops, something went wrong!');
